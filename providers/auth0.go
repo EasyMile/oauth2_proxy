@@ -7,6 +7,9 @@ import (
 	"net/url"
 
 	"github.com/bitly/oauth2_proxy/api"
+	"strings"
+	"encoding/base64"
+	"encoding/json"
 )
 
 type Auth0Provider struct {
@@ -67,6 +70,12 @@ func (p *Auth0Provider) GetEmailAddress(s *SessionState) (string, error) {
 	if s.AccessToken == "" {
 		return "", errors.New("missing access token")
 	}
+	email, err := subFromNonInteractiveClient(s.AccessToken)
+	if err == nil {
+		return email, nil
+	}
+	fmt.Printf("%s email, %s error", email, err)
+
 	req, err := http.NewRequest("GET", p.ProfileURL.String(), nil)
 	if err != nil {
 		return "", err
@@ -85,6 +94,32 @@ func (p *Auth0Provider) GetEmailAddress(s *SessionState) (string, error) {
 		return "", errors.New("no email")
 	}
 	return r.Email, nil
+}
+
+func subFromNonInteractiveClient(idToken string) (string, error) {
+
+	// id_token is a base64 encode ID token payload
+	// https://developers.google.com/accounts/docs/OAuth2Login#obtainuserinfo
+	jwt := strings.Split(idToken, ".")
+	if len(jwt) != 3 {
+		return "", errors.New("not a jwt token")
+	}
+	b, err := base64.RawURLEncoding.DecodeString(jwt[1])
+	if err != nil {
+		return "", err
+	}
+
+	var jwt_struct struct {
+		Sub         string `json:"sub"`
+	}
+	err = json.Unmarshal(b, &jwt_struct)
+	if err != nil {
+		return "", err
+	}
+	if jwt_struct.Sub == "" {
+		return "", errors.New("missing email")
+	}
+	return jwt_struct.Sub, nil
 }
 
 func (p *Auth0Provider) ValidateSessionState(s *SessionState) bool {

@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bitly/oauth2_proxy/api"
-	"strings"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/bitly/oauth2_proxy/api"
+	"strings"
 )
 
 type Auth0Provider struct {
@@ -108,7 +108,7 @@ func subFromNonInteractiveClient(idToken string) (string, error) {
 	}
 
 	var jwt_struct struct {
-		Sub         string `json:"sub"`
+		Sub string `json:"sub"`
 	}
 	err = json.Unmarshal(b, &jwt_struct)
 	if err != nil {
